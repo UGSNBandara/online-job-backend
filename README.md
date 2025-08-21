@@ -27,10 +27,10 @@ A Node.js Express backend using Express and MongoDB (via Mongoose).
    PORT=5000
    MONGODB_URI=mongodb://127.0.0.1:27017/online_job_portal
    ```
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+4. Start the development server (runs on http://localhost:5000):
+  ```bash
+  npm run dev
+  ```
 
 ## API Endpoints
 
