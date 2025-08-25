@@ -143,4 +143,68 @@ exports.deletePost = async (req, res) => {
     console.error('Error deleting post:', error);
     res.status(500).json({ message: error.message });
   }
-}; 
+};
+
+// Like or unlike a post
+exports.likePost = async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.body.userId;
+    if (!userId) return res.status(400).json({ message: 'userId required' });
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    const alreadyLiked = post.likedBy.includes(userId);
+    if (alreadyLiked) {
+      post.likedBy.pull(userId);
+      post.likeCount = Math.max(0, post.likeCount - 1);
+      await post.save();
+      return res.json({ message: 'Post unliked', likeCount: post.likeCount });
+    } else {
+      post.likedBy.push(userId);
+      post.likeCount += 1;
+      await post.save();
+      return res.json({ message: 'Post liked', likeCount: post.likeCount });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get posts by user ID
+exports.getPostsByUserId = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const posts = await Post.find({ user_id: userId }).sort({ created_at: -1 });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get wall posts (exclude current user's own and liked posts)
+exports.getWallPosts = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { page = 1, limit = 10 } = req.query;
+    const numericPage = parseInt(page, 10) || 1;
+    const numericLimit = parseInt(limit, 10) || 10;
+    const skip = (numericPage - 1) * numericLimit;
+    if (!userId) return res.status(400).json({ message: 'userId required' });
+    const filter = {
+      user_id: { $ne: userId },
+      likedBy: { $ne: userId }
+    };
+    const [posts, count] = await Promise.all([
+      Post.find(filter).sort({ created_at: -1 }).skip(skip).limit(numericLimit),
+      Post.countDocuments(filter)
+    ]);
+    res.json({
+      posts,
+      totalPages: Math.ceil(count / numericLimit),
+      currentPage: numericPage,
+      totalPosts: count
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

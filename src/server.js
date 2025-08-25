@@ -10,6 +10,7 @@ const messageRoutes = require('./routes/messageRoutes');
 const postRoutes = require('./routes/postRoutes');
 const userRoutes = require('./routes/userRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
+const jobRoutes = require('./routes/jobRoutes');
 
 dotenv.config();
 
@@ -47,6 +48,8 @@ app.use('/api/experiences', experienceRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/posts', upload.array('images', 5), postRoutes);
 app.use('/api/users', userRoutes);
+
+app.use('/api/jobs', jobRoutes);
 app.use('/api/media', mediaRoutes);
 
 app.get('/', (req, res) => {
@@ -66,3 +69,11 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
+
+// Start server for local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}

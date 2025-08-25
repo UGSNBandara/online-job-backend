@@ -9,7 +9,9 @@ const postSchema = new mongoose.Schema({
   salary: { type: String },
   location: { type: String },
   job_type: { type: String },
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  likeCount: { type: Number, default: 0 },
+  likedBy: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] }
 }, {
   collection: 'posts',
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
