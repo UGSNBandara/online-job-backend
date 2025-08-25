@@ -107,8 +107,10 @@ exports.register = async (req, res) => {
       return res.status(409).json({ message: 'Email already registered.' });
     }
     const user = new User({ email, password, firstName, lastName, role });
-    await user.save();
-    res.status(201).json({ message: 'User registered successfully.' });
+  await user.save();
+  const userObj = user.toObject();
+  delete userObj.password;
+  res.status(201).json({ message: 'User registered successfully.', user: userObj });
   } catch (error) {
     res.status(500).json({ message: 'Registration failed', error: error.message });
   }
