@@ -22,11 +22,11 @@ exports.getAllProjects = async (req, res) => {
 };
 
 // Get project by ID
-exports.getProjectById = async (req, res) => {
+exports.getProjectsByUserId = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id);
+    const project = await Project.find({ user_id: req.params.id });
     if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
+      return res.status(404).json({ message: 'Project for this userID not found' });
     }
     res.status(200).json(project);
   } catch (error) {

@@ -19,7 +19,7 @@ exports.getAllExperiences = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
+};  
 
 // Get experience by ID
 exports.getExperienceById = async (req, res) => {

@@ -18,15 +18,13 @@ exports.createPost = async (req, res) => {
     const { title, description, user_id } = req.body;
     
     // Handle image upload
-    let image_url = null;
-    let images = [];
+    let image = null;
     if (req.files && req.files.length > 0) {
-      const ids = await saveImages(req.files);
-      images = ids;
-      image_url = ids[0] ? `/api/media/${ids[0]}` : null;
+      const ids = await saveImages([req.files[0]]);
+      image = ids[0];
     }
 
-    const post = await Post.create({ title, description, image_url, images, user_id });
+    const post = await Post.create({ title, description, image, user_id });
 
     res.status(201).json(post);
   } catch (error) {
@@ -35,86 +33,31 @@ exports.createPost = async (req, res) => {
   }
 };
 
-// Get all posts with pagination and filters
-exports.getAllPosts = async (req, res) => {
-  try {
-    const { page = 1, limit = 10, job_type, location, search } = req.query;
-    const numericPage = parseInt(page, 10) || 1;
-    const numericLimit = parseInt(limit, 10) || 10;
-    const skip = (numericPage - 1) * numericLimit;
 
-    const filter = {};
-    if (job_type) filter.job_type = job_type;
-    if (location) filter.location = location;
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const [posts, count] = await Promise.all([
-      Post.find(filter).sort({ created_at: -1 }).skip(skip).limit(numericLimit),
-      Post.countDocuments(filter)
-    ]);
-
-    res.status(200).json({
-      posts,
-      totalPages: Math.ceil(count / numericLimit),
-      currentPage: numericPage,
-      totalPosts: count
-    });
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get post by ID
-exports.getPostById = async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-    res.status(200).json(post);
-  } catch (error) {
-    console.error('Error fetching post:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
 
 // Update post
 exports.updatePost = async (req, res) => {
   try {
-    const { title, description, requirements, salary, location, job_type } = req.body;
+  const { title, description } = req.body;
     const post = await Post.findById(req.params.id);
     
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Handle image uploads
-    let images = Array.isArray(post.images) ? post.images : [];
+    // Handle image upload (only one image allowed)
     if (req.files && req.files.length > 0) {
-      // Delete old images if needed
-      if (req.body.deleteOldImages === 'true') {
-        try { await Media.deleteMany({ _id: { $in: images } }); } catch {}
-        images = [];
+      // Delete old image if new image is received
+      if (post.image) {
+        try { await Media.findByIdAndDelete(post.image); } catch {}
       }
-      
-      // Save new images
-      const newImages = await saveImages(req.files);
-      images = [...images, ...newImages];
+      // Save only the first new image
+      const newImages = await saveImages([req.files[0]]);
+      post.image = newImages[0];
     }
 
     post.title = title ?? post.title;
     post.description = description ?? post.description;
-    post.requirements = requirements ?? post.requirements;
-    post.salary = salary ?? post.salary;
-    post.location = location ?? post.location;
-    post.job_type = job_type ?? post.job_type;
-    post.images = images;
     await post.save();
 
     res.status(200).json(post);
@@ -132,9 +75,9 @@ exports.deletePost = async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
-    // Delete associated images
-    if (post.images && post.images.length) {
-      try { await Media.deleteMany({ _id: { $in: post.images } }); } catch {}
+    // Delete associated image
+    if (post.image) {
+      try { await Media.findByIdAndDelete(post.image); } catch {}
     }
 
     await post.deleteOne();
@@ -174,7 +117,7 @@ exports.likePost = async (req, res) => {
 exports.getPostsByUserId = async (req, res) => {
   try {
     const userId = req.params.userId;
-    const posts = await Post.find({ user_id: userId }).sort({ created_at: -1 });
+    const posts = await Post.find({ user_id: userId }).sort({ created_at: -1 }); //descending oder
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -184,27 +127,22 @@ exports.getPostsByUserId = async (req, res) => {
 // Get wall posts (exclude current user's own and liked posts)
 exports.getWallPosts = async (req, res) => {
   try {
+    // Get the current user's ID from the route parameter
     const userId = req.params.userId;
-    const { page = 1, limit = 10 } = req.query;
-    const numericPage = parseInt(page, 10) || 1;
-    const numericLimit = parseInt(limit, 10) || 10;
-    const skip = (numericPage - 1) * numericLimit;
+  // Pagination removed; will fetch all posts matching filter
+    // If userId is not provided, return a 400 error
     if (!userId) return res.status(400).json({ message: 'userId required' });
+    // Build a filter to exclude posts created by or liked by the current user
     const filter = {
-      user_id: { $ne: userId },
-      likedBy: { $ne: userId }
+      user_id: { $ne: userId }, // Exclude posts created by the current user
+      likedBy: { $ne: userId }  // Exclude posts liked by the current user
     };
-    const [posts, count] = await Promise.all([
-      Post.find(filter).sort({ created_at: -1 }).skip(skip).limit(numericLimit),
-      Post.countDocuments(filter)
-    ]);
-    res.json({
-      posts,
-      totalPages: Math.ceil(count / numericLimit),
-      currentPage: numericPage,
-      totalPosts: count
-    });
+  // Fetch all posts matching filter, sorted by newest first
+  const posts = await Post.find(filter).sort({ created_at: -1 });
+  // Respond with all posts
+  res.json({ posts });
   } catch (error) {
+    // Handle errors and respond with 500 status
     res.status(500).json({ message: error.message });
   }
 };

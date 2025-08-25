@@ -3,12 +3,8 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  image_url: { type: String },
-  images: { type: [mongoose.Schema.Types.ObjectId], ref: 'Media', default: [] },
-  requirements: { type: String },
-  salary: { type: String },
-  location: { type: String },
-  job_type: { type: String },
+  image: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
+  // location, job_type, and salary removed
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   likeCount: { type: Number, default: 0 },
   likedBy: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] }

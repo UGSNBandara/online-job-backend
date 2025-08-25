@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 
 const app = express();
@@ -22,7 +21,6 @@ app.use((err, req, res, next) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 5000;
