@@ -61,7 +61,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/projects', projectRoutes);      // Project endpoints
 app.use('/api/experiences', experienceRoutes); // Experience endpoints
 app.use('/api/messages', messageRoutes);       // Messaging endpoints
-app.use('/api/posts', upload.single('image'), postRoutes); // Post endpoints (single image upload)
+app.use('/api/posts', postRoutes); // Post endpoints - multer moved to individual routes
 app.use('/api/users', userRoutes);             // User endpoints
 app.use('/api/jobs', jobRoutes);               // Job endpoints
 app.use('/api/media', mediaRoutes);            // Media/image endpoints

@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  image: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
-  // location, job_type, and salary removed
+  image_url: { type: String }, // URL path to the image
+  images: { type: [String], default: [] }, // Array of image URLs
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   likeCount: { type: Number, default: 0 },
   likedBy: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] }

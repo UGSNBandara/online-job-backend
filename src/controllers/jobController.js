@@ -14,9 +14,9 @@ exports.createJob = async (req, res) => {
       requirements,
       user_id
     });
-    res.status(201).json(job);
+    res.status(201).json(job); // Created
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ message: error.message }); // Bad Request
   }
 };
 
@@ -26,7 +26,7 @@ exports.getAllJobs = async (req, res) => {
     const jobs = await Job.find().sort({ created_at: -1 });
     res.json(jobs);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message }); // Internal Server Error
   }
 };
 

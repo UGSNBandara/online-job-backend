@@ -17,15 +17,31 @@ exports.createPost = async (req, res) => {
   try {
     const { title, description, user_id } = req.body;
     
+    // Validate required fields
+    if (!title || !description || !user_id) {
+      return res.status(400).json({ 
+        message: 'Missing required fields: title, description, and user_id are required' 
+      });
+    }
+    
+    // Validate user_id is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(user_id)) {
+      return res.status(400).json({ 
+        message: 'Invalid user_id format' 
+      });
+    }
+    
     // Handle image upload
-    let image = null;
-    if (req.files && req.files.length > 0) {
-      const ids = await saveImages([req.files[0]]);
-      image = ids[0];
+    let image_url = null;
+    let images = [];
+    if (req.file) {
+      const ids = await saveImages([req.file]);
+      const imageId = ids[0];
+      image_url = `/api/media/${imageId}`;
+      images = [image_url];
     }
 
-    const post = await Post.create({ title, description, image, user_id });
-
+    const post = await Post.create({ title, description, image_url, images, user_id });
     res.status(201).json(post);
   } catch (error) {
     console.error('Error creating post:', error);
@@ -46,14 +62,18 @@ exports.updatePost = async (req, res) => {
     }
 
     // Handle image upload (only one image allowed)
-    if (req.files && req.files.length > 0) {
+    if (req.file) {
       // Delete old image if new image is received
-      if (post.image) {
-        try { await Media.findByIdAndDelete(post.image); } catch {}
+      if (post.image_url) {
+        // Extract image ID from URL and delete from Media collection
+        const oldImageId = post.image_url.split('/').pop();
+        try { await Media.findByIdAndDelete(oldImageId); } catch {}
       }
-      // Save only the first new image
-      const newImages = await saveImages([req.files[0]]);
-      post.image = newImages[0];
+      // Save new image
+      const newImageIds = await saveImages([req.file]);
+      const newImageId = newImageIds[0];
+      post.image_url = `/api/media/${newImageId}`;
+      post.images = [post.image_url];
     }
 
     post.title = title ?? post.title;
@@ -76,8 +96,10 @@ exports.deletePost = async (req, res) => {
     }
 
     // Delete associated image
-    if (post.image) {
-      try { await Media.findByIdAndDelete(post.image); } catch {}
+    if (post.image_url) {
+      // Extract image ID from URL and delete from Media collection
+      const imageId = post.image_url.split('/').pop();
+      try { await Media.findByIdAndDelete(imageId); } catch {}
     }
 
     await post.deleteOne();
@@ -108,6 +130,33 @@ exports.likePost = async (req, res) => {
       await post.save();
       return res.json({ message: 'Post liked', likeCount: post.likeCount });
     }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all posts (public)
+exports.getAllPosts = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const posts = await Post.find()
+      .sort({ created_at: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get post by ID (public)
+exports.getPostById = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    res.json(post);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
